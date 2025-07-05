@@ -1,0 +1,50 @@
+openapi: 3.0.0
+info:
+  title: Adoption Status API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3012
+paths:
+  /adoption/status:
+    post:
+      summary: Create adoption status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - petId
+                - status
+              properties:
+                petId:
+                  type: string
+                status:
+                  type: string
+                  enum: [not_adopted, reserved, adopted]
+                notes:
+                  type: string
+      responses:
+        '201':
+          description: Status created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdoptionStatus'
+        '400':
+          description: Bad request
+components:
+  schemas:
+    AdoptionStatus:
+      type: object
+      properties:
+        petId:
+          type: string
+        status:
+          type: string
+        notes:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
