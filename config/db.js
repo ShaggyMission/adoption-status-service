@@ -1,8 +1,7 @@
-
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
-  const mongoURI = 'mongodb://localhost:27017/adoption_status';
+  const mongoURI = 'mongodb://admin:Lis.12345@54.156.27.209:27017/admin';
 
   try {
     await mongoose.connect(mongoURI, {

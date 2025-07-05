@@ -1,50 +1,229 @@
 openapi: 3.0.0
 info:
-  title: Adoption Status API
+  title: Adoption Status Service API
   version: 1.0.0
+  description: >
+    This API provides adoption status management functionality for the Shaggy Mission pet adoption system.
+    The service allows tracking and managing the adoption status of pets in the database, including
+    states like not_adopted, reserved, and adopted. This service is designed to help rescue organizations,
+    adoption centers, and volunteers track the adoption progress of pets waiting for their forever homes.
+    The API provides comprehensive status tracking including notes and timestamps to facilitate
+    efficient adoption workflow management.
+
 servers:
   - url: http://localhost:3012
+    description: Development server
+
 paths:
   /adoption/status:
     post:
-      summary: Create adoption status
+      summary: Create adoption status for a pet
+      description: >
+        Creates a new adoption status record for a pet in the database. This endpoint allows
+        rescue organizations and adoption centers to track the adoption progress of pets.
+        Each pet can only have one status record to maintain data integrity.
+        
+        **Status Management Features:**
+        - Unique status per pet (prevents duplicates)
+        - Three status levels: not_adopted, reserved, adopted
+        - Optional notes for additional context
+        - Automatic timestamp tracking
+        
+        **Status Types:**
+        - **not_adopted**: Pet is available for adoption
+        - **reserved**: Pet is reserved by a potential adopter
+        - **adopted**: Pet has been successfully adopted
+        
+        **Use Cases:**
+        - Track adoption workflow progress
+        - Manage pet availability status
+        - Record adoption milestones
+        - Maintain adoption history with notes
+        
+        **Data Integrity:**
+        - Prevents duplicate status records per pet
+        - Validates status enum values
+        - Automatic timestamp management
+        - Unique constraint on petId field
+      tags:
+        - Adoption Status Management
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - petId
-                - status
-              properties:
-                petId:
-                  type: string
-                status:
-                  type: string
-                  enum: [not_adopted, reserved, adopted]
-                notes:
-                  type: string
+              $ref: '#/components/schemas/CreateStatusRequest'
+            examples:
+              new_pet_available:
+                summary: New pet available for adoption
+                value:
+                  petId: "64f8b2a1c3d4e5f6a7b8c9d0"
+                  status: "not_adopted"
+                  notes: "Healthy golden retriever ready for adoption"
+              pet_reserved:
+                summary: Pet reserved by adopter
+                value:
+                  petId: "64f8b2a1c3d4e5f6a7b8c9d1"
+                  status: "reserved"
+                  notes: "Reserved by Smith family, pending home visit"
+              pet_adopted:
+                summary: Pet successfully adopted
+                value:
+                  petId: "64f8b2a1c3d4e5f6a7b8c9d2"
+                  status: "adopted"
+                  notes: "Adopted by Johnson family on 2024-01-20"
+              minimal_request:
+                summary: Minimal required fields
+                value:
+                  petId: "64f8b2a1c3d4e5f6a7b8c9d3"
+                  status: "not_adopted"
       responses:
         '201':
-          description: Status created successfully
+          description: Successfully created adoption status
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdoptionStatus'
+              examples:
+                successful_creation:
+                  summary: Successful status creation
+                  value:
+                    _id: "64f8b2a1c3d4e5f6a7b8c9d4"
+                    petId: "64f8b2a1c3d4e5f6a7b8c9d0"
+                    status: "not_adopted"
+                    notes: "Healthy golden retriever ready for adoption"
+                    updatedAt: "2024-01-15T10:30:00.000Z"
+                    __v: 0
         '400':
-          description: Bad request
+          description: Bad Request - Status already exists or invalid data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicate_status:
+                  summary: Status already exists for pet
+                  value:
+                    message: "Status for this pet already exists."
+                validation_error:
+                  summary: Invalid request data
+                  value:
+                    message: "Validation failed"
+                    error: "Invalid status value"
+        '500':
+          description: Internal Server Error - Database or server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                database_error:
+                  summary: Database connection error
+                  value:
+                    message: "Failed to create status"
+                    error: "Database connection failed"
+                server_error:
+                  summary: General server error
+                  value:
+                    message: "Failed to create status"
+                    error: "Internal server error"
+
 components:
   schemas:
-    AdoptionStatus:
+    CreateStatusRequest:
       type: object
       properties:
         petId:
           type: string
+          description: Unique identifier of the pet (MongoDB ObjectId)
+          example: "64f8b2a1c3d4e5f6a7b8c9d0"
+          pattern: '^[0-9a-fA-F]{24}$'
         status:
           type: string
+          description: Current adoption status of the pet
+          enum: ["not_adopted", "reserved", "adopted"]
+          example: "not_adopted"
+          default: "not_adopted"
         notes:
           type: string
+          description: Additional notes or comments about the adoption status
+          example: "Healthy golden retriever ready for adoption"
+          nullable: true
+      required:
+        - petId
+        - status
+      description: Request payload for creating a new adoption status
+
+    AdoptionStatus:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique MongoDB ObjectId for the status record
+          example: "64f8b2a1c3d4e5f6a7b8c9d4"
+          pattern: '^[0-9a-fA-F]{24}$'
+        petId:
+          type: string
+          description: Unique identifier of the pet
+          example: "64f8b2a1c3d4e5f6a7b8c9d0"
+          pattern: '^[0-9a-fA-F]{24}$'
+        status:
+          type: string
+          description: Current adoption status
+          enum: ["not_adopted", "reserved", "adopted"]
+          example: "not_adopted"
+        notes:
+          type: string
+          description: Additional notes or comments
+          example: "Healthy golden retriever ready for adoption"
+          nullable: true
         updatedAt:
           type: string
           format: date-time
+          description: Timestamp when the status was last updated
+          example: "2024-01-15T10:30:00.000Z"
+        __v:
+          type: integer
+          description: Mongoose version field
+          example: 0
+      required:
+        - _id
+        - petId
+        - status
+        - updatedAt
+      description: Complete adoption status record
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: High-level error message
+          example: "Failed to create status"
+        error:
+          type: string
+          description: Detailed error information
+          example: "Database connection failed"
+          nullable: true
+      required:
+        - message
+      description: Standard error response format for API errors
+
+  examples:
+    AdoptionWorkflow:
+      summary: Example adoption workflow
+      description: >
+        This example demonstrates the typical adoption workflow:
+        1. Pet arrives at shelter → status: "not_adopted"
+        2. Potential adopter shows interest → status: "reserved"
+        3. Adoption is finalized → status: "adopted"
+      value:
+        - petId: "64f8b2a1c3d4e5f6a7b8c9d0"
+          status: "not_adopted"
+          notes: "New arrival, health check completed"
+        - petId: "64f8b2a1c3d4e5f6a7b8c9d0"
+          status: "reserved"
+          notes: "Reserved by Smith family, pending home visit"
+        - petId: "64f8b2a1c3d4e5f6a7b8c9d0"
+          status: "adopted"
+          notes: "Successfully adopted by Smith family"
